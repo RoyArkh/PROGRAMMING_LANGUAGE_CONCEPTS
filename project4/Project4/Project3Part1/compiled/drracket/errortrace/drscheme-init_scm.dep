@@ -1,0 +1,1 @@
+("8.12" ta6nt ("fa32ef9a2f919557ff1f41374ae7ab7742afba79" . "d348879653c052932e722e6d43345bf2ec7df7aa") (collects #"drracket" #"private" #"drracket-errortrace-key.rkt") (collects #"mzlib" #"pretty.rkt") (collects #"mzlib" #"trace.rkt") (collects #"mzscheme" #"main.rkt"))

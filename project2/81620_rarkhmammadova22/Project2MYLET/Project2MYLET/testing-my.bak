@@ -1,0 +1,63 @@
+#lang eopl
+
+;; interpreter for the LET language.  The \commentboxes are the
+;; latex code for inserting the rules into the code in the book.
+;; These are too complicated to put here, see the text, sorry.
+
+(require "lang.rkt")
+(require "data-structures.rkt")
+(require "environments.rkt")
+
+(provide value-of-program value-of)
+
+;;;;;;;;;;;;;;;; the interpreter ;;;;;;;;;;;;;;;;
+
+;; value-of-program : Program -> ExpVal
+;; Page: 71
+(define value-of-program 
+  (lambda (pgm)
+    (cases program pgm
+      (a-program (exp1)
+                 (value-of exp1 (init-env))))))
+
+;; value-of : Exp * Env -> ExpVal
+;; Page: 71
+(define value-of
+  (lambda (exp env)
+    (cases expression exp
+      
+      (const-exp (num) (num-val num))
+
+      (var-exp (var) (apply-env env var))
+      
+      ;; -----------------------
+      ;; INSERT YOUR CODE HERE 
+      ;; -----------------------
+      
+      (cons-exp (exp1 exp2)
+                (let ((val1 (value-of exp1 env)))
+                  ((val2 (value-of exp2 env)))
+                  (let ((num1 (expval->rational val1)))
+                    ((lst1 (expval->list val2)))
+                    (if (number? num1)
+                        (cons num1 lst1)
+                        lst1)
+                    )
+                  )
+                )
+
+      (mul-exp (exp1)
+               (let ((val1 (value-of exp1 env)))
+                 (let ((lst1 (expval->lst val1)))
+                   (if (null? lst1)
+                       0
+                       (car lst1 * (if (null? (cadr lst1))
+                                       1
+                                       (mul-exp (cdr lst1)))
+                            ))
+                   )))
+                    
+      (list-exp (list-val empty-list))
+      ;; -----------------------
+
+      )))
