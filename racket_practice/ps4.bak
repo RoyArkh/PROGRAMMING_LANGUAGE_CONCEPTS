@@ -1,0 +1,29 @@
+#lang scheme
+
+(define (empty-list)
+  (lambda (mode)
+    (display "end of list")))
+
+(define (prepend-list a lst)
+  (lambda (mode)
+    (if mode
+        a
+        lst)))
+
+(define (car-list lst)
+  (lst #t))
+
+(define (cdr-list lst)
+  (lst #f))
+
+(define x
+  (prepend-list 13
+                (prepend-list 3
+                              (prepend-list 6
+                                            (prepend-list 7
+                                                          (empty-list))))))
+
+
+;(require racket/trace)
+;(trace car-list)
+;(trace cdr-list)

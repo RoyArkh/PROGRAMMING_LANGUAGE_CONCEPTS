@@ -1,0 +1,21 @@
+#lang scheme
+(define extract-first (lambda (lst)
+                     (if (null? lst)
+                         '()
+                         (if (number? (car lst))
+                             ()
+                             (car lst)
+                             ))))
+
+(define flatten-tree
+  (lambda (tree) (if (null? tree)
+                     '()
+                     (cons (extract-first tree) (flatten-tree (cdr tree)))
+                     )))
+
+(require racket/trace)
+(trace extract-first)
+
+(define listik (list (list (list 1)) 2 3 4 5))
+(extract-first listik) 
+(flatten-tree '((1) (2 3 4) (((5)))))

@@ -1,0 +1,344 @@
+#lang scheme
+(require (lib "eopl.ss" "eopl"))
+
+;;;;;;;;;;;;;;;;LECTURES;;;;;;;;;;;;;;;;
+
+
+;;;Lecture 4;;;
+;demonstrating consing up and cdrring down
+
+(define nil '())
+
+(define (enumerate-interval from to)
+  (if (> from to)
+      nil
+      (cons from (enumerate-interval (+ 1 from) to))))
+
+;(enumerate-interval 1 5)
+
+
+(define (list-ref lst n)
+  (if (= 0 n)
+      (car lst)
+      (list-ref (cdr lst) (- n 1))
+      ))
+
+;(list-ref '(1 2 3 4) 3)
+
+
+;;;Lecture 5;;;
+; looking at some common programming patterns such as maps, filters, reduction
+
+(define myfilter (lambda (predic lst)
+                   (cond ((null? lst) nil)
+                         ((predic (car lst))
+                          (cons (car lst) (myfilter predic (cdr lst))))
+                         (else (myfilter predic (cdr lst)))
+                         )))
+
+(define odd? (lambda (x)
+               (if (= 1 (modulo x 2))
+                   #t
+                   #f)))
+
+;(odd? 1)
+;(odd? 12)
+;(odd? -1)
+;(myfilter odd? '(-3 -2 -1 0 1 2 3 4 5 6 7))
+
+
+(define reduction (lambda (lst base oper)
+                    (if (null? lst)
+                        base
+                        (oper (car lst) (reduction (cdr lst) base oper))
+                        )))
+
+;(reduction '(1 2 3 4) 1 *)
+;(reduction '(1 2 3 4) 0 +)
+
+
+
+
+;;;Lecture 6;;;
+;general principles, occurs-free?
+
+
+(define occurs-free? (lambda (var exp)
+                       (cond ((symbol? exp) (eq? var exp))
+                             ((eq? (car exp) 'lambda)
+                              (and
+                               (not (eq? var (car (car (cdr exp)))))
+                               (occurs-free? var (caddr exp))))
+                             (else (or
+                                    (occurs-free? var (car exp))
+                                    (occurs-free? var (cadr exp))))
+                             )))
+
+;(occurs-free? 'x 'x)
+;(occurs-free? 'x 'y)
+;(occurs-free? 'x '(lambda (x) (xy)))
+;(occurs-free? 'x '(lambda (y) (x y)))
+;(occurs-free? 'x '((lambda (x) x) (x y)))
+                           
+
+;;;Lecture 7;;;
+; follow th grammar
+
+
+;my try for subst
+
+;(define subst (lambda (old new slist)
+;                (cond ((null? slist) nil)
+;                      ((list? (car slist))
+;                       (cons (subst old new (car slist)) (subst old new (cdr slist))))
+;                      ((eq? (car slist) old)
+;                       (cons new (subst old new (cdr slist))))
+;                      (else (cons (car slist) (subst old new (cdr slist))))
+;                      )))
+
+;(subst 'b 'a '((b c) (b () d)))
+
+;although my try at it works, there's an easier way to write it by relying on the grammar of the language
+;the way slist is defined helps us here
+
+
+(define subst (lambda (new old slist)
+                (if (null? slist)
+                    '()
+                    (cons (subst-in-exp new old (car slist))
+                          (subst new old (cdr slist)))
+                    )))
+
+(define subst-in-exp (lambda (new old sexp)
+                       (if (symbol? sexp)
+                           (if (eq? sexp old)
+                               new
+                               sexp)
+                           (subst new old sexp)
+                           )))
+
+;(subst 'a 'b '((b c) (b () d)))
+
+
+
+
+;;;Lecture 8;;;
+;creating an environment
+
+(define empty-env (lambda () (list 'empty-env)))
+
+(define extend-env (lambda (var val env)
+                     (list 'extend-env var val env)))
+
+(define apply-env (lambda (env search-var)
+                    (cond ((eq? (car env) 'empty-env)
+                           '('report-no-binding-found search-var))
+                          ((eq? (car env) 'extend-env)
+                           (if (eq? (cadr env) search-var)
+                               (caddr env)
+                               (apply-env cadddr env)))
+                          (else '('report-invalid-env env)))
+                    ))
+
+
+;;;Lecture 9;;;
+;procedural implementation of the environment & define-datatype
+
+(define empty-env-p (lambda ()
+                      (lambda (search-var) '('report-no-binding-found search-var))))
+
+(define extend-env-p (lambda (var val env)
+                       (lambda (search-var)
+                         (if (eq? var search-var)
+                             val
+                             (apply-env-p env search-var)))
+                       ))
+
+(define apply-env-p (lambda (env search-var)
+                      (env search-var)))
+
+
+;(define-datatype environment environment?
+;  (empty-env-d)
+;  (extend-env-d
+;   (bvar symbol?)
+;   (bval expval?)
+;   (saved-env environment?))
+;  (extend-env-rec-d
+;   (id symbol?)
+;   (bvar symbol?)
+;   (body expression?)
+;   (saved-env environment?)))
+
+
+(define-datatype s-list s-list?
+  (empty-s-list)
+  (non-empty-s-list
+   (first s-exp?)
+   (rest s-list?))
+  )
+   
+
+(define-datatype s-exp s-exp?
+  (symbol-s-exp
+   (sym symbol?))
+  (s-list-s-exp
+   (slst s-list?))
+  )
+
+
+
+;;;Lecture 10;;;
+;continuing define-datatype & parsing-unparsing
+
+(define-datatype lc-exp lc-exp?
+  (var-exp-lc
+   (var identifier?))
+  (lambda-exp
+   (bound-var identifier?)
+   (body lc-exp?))
+  (app-exp
+   (rator lc-exp?)
+   (rand lc-exp?))
+  )
+
+
+(define parse-expression
+  (lambda (datum)
+    (cond ((symbol? datum)
+           (var-exp-lc datum))
+          ((pair? datum)
+           (if (eqv? (car datum) 'lambda)
+               (lambda-exp
+                (car (cadr datum))
+                (parse-expression (caddr datum)))
+               (app-exp
+                (parse-expression (car datum))
+                (parse-expression (cadr datum)))))
+          (else ('report-invalid-concrete-syntax datum))
+          )))
+
+
+(define unparse-lc-exp
+  (lambda (exp)
+    (cases lc-exp exp
+      (var-exp-lc (var) var)
+      (lambda-exp (bound-var body)
+                  (list 'lambda (list bound-var)
+                        (unparse-lc-exp body)))
+      (app-exp (rator rand)
+               (list (unparse-lc-exp rator)
+                     (unparse-lc-exp rand)
+                     )))))
+
+
+;;;Lecture 11, 12;;;
+;LET language & its implementation
+
+(define-datatype program program?
+  (a-program
+   (exp1 expression?)))
+
+(define-datatype expression expression?
+  (const-exp
+   (num number?))
+  (diff-exp
+   (exp1 expression?)
+   (exp2 expression?))
+  (zero?-exp
+   (exp1 expression?))
+  (if-exp
+   (exp1 expression?)
+   (exp2 expression?)
+   (exp3 expression?))
+  (var-exp
+   (var identifier?))
+  (let-exp
+   (var identifier?)
+   (exp1 expression?)
+   (body expression?)))
+
+(define-datatype expval expval?
+  (num-val
+   (value number?))
+  (bool-val
+   (value boolean?))
+  )
+
+(define expval->num
+  (lambda (v)
+    (cases expval v
+      (num-val (num) num)
+      (else (expval-extractor-error 'num v))
+      )))
+
+
+(define expval->bool
+  (lambda (v)
+    (cases expval v
+      (bool-val (bool) bool)
+      (else (expval-extractor-error 'bool v))
+      )))
+
+(define expval-extractor-error
+  (lambda (variant value)
+    (eopl:error 'expval-extractors "Looking for a ~s, found ~s"
+	variant value)))
+
+(define init-env 
+    (lambda () (empty-env)))
+
+(define value-of-program
+  (lambda (pgm)
+    (cases program pgm
+      (a-program (exp1)
+                 (value-of exp1 (init-env))))))
+
+(define value-of
+  (lambda (exp env)
+    (cases expression exp
+      (const-exp (num) (num-val num))
+      (var-exp (var) (apply-env env var))
+      (diff-exp (exp1 exp2)
+                (let ((val1 (value-of exp1 env))
+                      (val2 (value-of exp2 env)))
+                  (let ((num1 (expval->num val1))
+                        (num2 (expval->num val2)))
+                    (num-val
+                     (- num1 num2)))))
+      (zero?-exp (exp1)
+                 (let ((val1 (value-of exp1 env)))
+                   (let ((num1 (expval->num val1)))
+                     (if (zero? num1)
+                         (bool-val #t)
+                         (bool-val #f)))))
+      (if-exp (exp1 exp2 exp3)
+              (let ((val1 (value-of exp1 env)))
+                (if (expval->bool val1)
+                    (value-of exp2 env)
+                    (value-of exp3 env))))
+      (let-exp (var exp1 body)       
+               (let ((val1 (value-of exp1 env)))
+                 (value-of body
+                           (extend-env var val1 env))))
+      )))
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   
+
+
+
+                 

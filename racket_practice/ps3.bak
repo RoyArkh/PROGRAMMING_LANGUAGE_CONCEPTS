@@ -1,0 +1,39 @@
+#lang scheme
+
+(define helper (lambda (elem n)
+                 (if (<= n 0)
+                     '()
+                     (cons elem (helper elem (- n 1)))
+                     )))
+                 
+
+(define repeatN (lambda (lst n)
+                  (if (null? lst)
+                      '()
+                      (append (helper (car lst) n) (repeatN (cdr lst) n))
+                      )))
+
+
+(define (reduce op init lst)
+  (if (null? lst)
+      init
+      (reduce op (op init (car lst)) (cdr lst))))
+(define (sum-even lst)
+   (reduce + 0 (filter even? lst)))
+
+
+
+
+(define IsIn? (lambda (lst x)
+                (if (null? lst)
+                    #f
+                    (if (= (car lst) x)
+                        #t
+                        (IsIn? (cdr lst) x)
+                        ))))
+
+(define (myProc pred lst1 lst2 op init) (
+
+
+
+

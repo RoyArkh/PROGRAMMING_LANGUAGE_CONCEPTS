@@ -1,0 +1,25 @@
+#lang scheme
+(define swapper (lambda (x y lst)
+                  (cond ((null? lst)
+                         '())
+                        ((eq? (car lst) x)
+                         (cons y (swapper x y (cdr lst))))
+                        ((eq? (car lst) y)
+                         (cons x (swapper x y (cdr lst))))
+                        ((pair? (car lst))
+                         (cons (swapper x y (car lst)) (swapper x y (cdr lst))))
+                        (else (cons (car lst) (swapper x y (cdr lst))))
+                        )))
+
+
+(define fun-help (lambda (x n)
+                   (if (= 0 n)
+                       '()
+                       (cons x (fun-help x (- n 1)))
+                       )))
+
+(define fun-list (lambda (x)
+                   (if (= 0 x)
+                       '()
+                       (append (fun-help x x) (fun-list (- x 1)))
+                       )))
